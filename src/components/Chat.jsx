@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
 import api from "../axios/api";
 
-const socket = io(import.meta.env.VITE_API_URL, { withCredentials: true });
+const socket = io("http://16.171.249.248:3000", { withCredentials: true });
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -49,7 +49,6 @@ const Chat = () => {
     };
   }, [senderId, receiverId]);
 
-  // Auto-scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -58,12 +57,7 @@ const Chat = () => {
     if (!message.trim()) return;
 
     const data = { sender: senderId, receiver: receiverId, message };
-
-    // Use only socket.io for sending messages
     socket.emit("sendMessage", data);
-
-    // Optimistically add message to UI
-    // The actual message with proper ID and timestamp will come from the socket event
     const optimisticMessage = {
       _id: Date.now(), // Temporary ID
       sender: senderId,
