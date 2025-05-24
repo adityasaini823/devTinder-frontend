@@ -1,26 +1,33 @@
-import React, { useEffect } from "react";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { removeUser } from "../../utils/userSlice";
 import api from "../axios/api";
+
 const Navbar = () => {
-  const user = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.user);
+
   const handleLogout = async () => {
     try {
-      const response = await api.get("/logout");
-      const data = response.data;
+      // Clear local storage
+      localStorage.removeItem("accessToken");
+
+      // Clear Redux store
+      dispatch(removeUser());
+
+      // Navigate to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if there's an error, we should still log the user out locally
       localStorage.removeItem("accessToken");
       dispatch(removeUser());
-      return navigate("/login");
-    } catch (error) {
-      console.log(error);
+      navigate("/login");
     }
   };
-  // console.log(user);
+
   return (
     <div className="navbar bg-base-300 shadow-sm">
       <div className="flex-1">
@@ -41,11 +48,18 @@ const Navbar = () => {
             >
               <div className="w-10 rounded-full">
                 <img
-                  alt="Tailwind CSS Navbar component"
+                  alt="Profile Picture"
                   src={
-                    user.profilePicture ||
-                    "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
+                    user.profilePicture &&
+                    user.profilePicture.startsWith("http")
+                      ? user.profilePicture
+                      : "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
                   }
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp";
+                  }}
                 />
               </div>
             </div>

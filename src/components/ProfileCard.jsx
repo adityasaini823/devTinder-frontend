@@ -57,12 +57,18 @@ const ProfileCard = ({ user }) => {
       )}
       <figure>
         <img
-          className="w-auto h-60 mt-2"
+          className="w-auto h-60 mt-2 object-cover"
           src={
-            profilePicture ||
-            "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
+            profilePicture && profilePicture.startsWith("http")
+              ? profilePicture
+              : "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
           }
           alt="Profile Picture"
+          onError={(e) => {
+            e.target.onerror = null; // Prevent infinite loop
+            e.target.src =
+              "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+          }}
         />
       </figure>
       <div className="card-body">

@@ -5,9 +5,16 @@ import { addRequests, removeRequest } from "../../utils/requestSlice";
 import { useEffect } from "react";
 import api from "../axios/api";
 import { newConnection } from "../../utils/connectionSlice";
+
 const Requests = () => {
   const dispatch = useDispatch();
   const requests = useSelector((state) => state.request);
+
+  // Filter requests by type
+  const receivedRequests =
+    requests?.filter((request) => request?.type === "received") || [];
+  const sentRequests =
+    requests?.filter((request) => request?.type === "sent") || [];
 
   const allRequests = async () => {
     try {
@@ -17,19 +24,40 @@ const Requests = () => {
         },
       });
       const data = response.data;
-      //   console.log(JSON.stringify(data.requests));
-      dispatch(addRequests(data.requests));
+
+      // Ensure we have valid data before combining
+      const receivedRequests = Array.isArray(data.receivedRequests)
+        ? data.receivedRequests
+        : [];
+      const sentRequests = Array.isArray(data.sentRequests)
+        ? data.sentRequests
+        : [];
+
+      // Combine and filter out any invalid requests
+      const allRequests = [...receivedRequests, ...sentRequests].filter(
+        (request) =>
+          request &&
+          request.request_id &&
+          ((request.type === "received" && request.sender) ||
+            (request.type === "sent" && request.receiver))
+      );
+
+      dispatch(addRequests(allRequests));
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching requests:", error);
     }
   };
+
   useEffect(() => {
     if (!requests || requests.length === 0) {
       allRequests();
     }
   }, [requests]);
+
   // ✅ Accept request function
   const acceptRequest = async (requestId, sender) => {
+    if (!requestId || !sender) return;
+
     try {
       const response = await api.post(
         `/match/accept/${requestId}`,
@@ -49,6 +77,8 @@ const Requests = () => {
 
   // ❌ Reject request function
   const rejectRequest = async (requestId) => {
+    if (!requestId) return;
+
     try {
       const response = await api.post(
         `/match/reject/${requestId}`,
@@ -58,33 +88,66 @@ const Requests = () => {
         }
       );
       if (response.data.success) {
-        dispatch(removeRequest(requestId)); // Remove request from Redux state
+        dispatch(removeRequest(requestId));
       }
     } catch (error) {
       console.error("Error rejecting request:", error);
     }
   };
+
   return (
-    <div className="flex justify-around items-center ">
-      <div className="card card-border bg-base-300 w-100">
+    <div className="flex flex-col md:flex-row gap-4 p-4">
+      {/* Received Requests Panel */}
+      <div className="card card-border bg-base-300 flex-1">
         <div className="card-body">
-          <h2 className="card-title">Requests</h2>
+          <h2 className="card-title text-primary">Received Requests</h2>
           <ul className="list bg-base-100 rounded-box shadow-md">
-            {/* <li className="p-4 pb-2 text-xs opacity-60 tracking-wide">
-              All Pending Requests
-            </li> */}
-            {requests?.length > 0 ? (
-              requests.map(({ request_id, sender }) => (
-                <RequestCard
-                  key={request_id}
-                  requestId={request_id} // ✅ Pass request ID
-                  sender={sender} // ✅ Pass sender details
-                  onAccept={() => acceptRequest(request_id, sender)} // ✅ Use request ID for API
-                  onReject={() => rejectRequest(request_id)} // ✅ Use request ID for API
-                />
-              ))
+            {receivedRequests.length > 0 ? (
+              receivedRequests.map((request) => {
+                if (!request || !request.request_id) return null;
+
+                return (
+                  <RequestCard
+                    key={request.request_id}
+                    requestId={request.request_id}
+                    user={request.sender}
+                    type="received"
+                    onAccept={() =>
+                      acceptRequest(request.request_id, request.sender)
+                    }
+                    onReject={() => rejectRequest(request.request_id)}
+                  />
+                );
+              })
             ) : (
-              <p>No requests found</p>
+              <p className="text-center py-4 text-gray-500">
+                No received requests
+              </p>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      {/* Sent Requests Panel */}
+      <div className="card card-border bg-base-300 flex-1">
+        <div className="card-body">
+          <h2 className="card-title text-secondary">Sent Requests</h2>
+          <ul className="list bg-base-100 rounded-box shadow-md">
+            {sentRequests.length > 0 ? (
+              sentRequests.map((request) => {
+                if (!request || !request.request_id) return null;
+
+                return (
+                  <RequestCard
+                    key={request.request_id}
+                    requestId={request.request_id}
+                    user={request.receiver}
+                    type="sent"
+                  />
+                );
+              })
+            ) : (
+              <p className="text-center py-4 text-gray-500">No sent requests</p>
             )}
           </ul>
         </div>

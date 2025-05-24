@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from "react";
 import ProfileCard from "./ProfileCard";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { addUser } from "../../utils/userSlice";
 import api from "../axios/api";
+
 const EditProfile = ({ user }) => {
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.user);
+
   // State for editable fields
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -18,6 +23,15 @@ const EditProfile = ({ user }) => {
   const [location, setLocation] = useState(user.location || "");
   const [preview, setPreview] = useState(user.profilePicture);
   const [error, setError] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  // Update preview when Redux store changes
+  useEffect(() => {
+    if (currentUser?.profilePicture) {
+      setPreview(currentUser.profilePicture);
+    }
+  }, [currentUser]);
+
   const data = {
     firstName: firstName,
     lastName: lastName,
@@ -28,7 +42,7 @@ const EditProfile = ({ user }) => {
     role: role,
     location: location,
   };
-  const [showToast, setShowToast] = useState(false);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0]; // Get selected file
     if (file) {
@@ -36,6 +50,7 @@ const EditProfile = ({ user }) => {
       setPreview(URL.createObjectURL(file));
     }
   };
+
   const handleImageUpdate = async () => {
     const formData = new FormData();
     formData.append("profilePicture", profilePicture);
@@ -50,17 +65,28 @@ const EditProfile = ({ user }) => {
           },
         }
       );
+
+      // Update Redux store with new user data
+      dispatch(addUser(response.data.user));
+
+      // Update preview with the new image URL
+      setPreview(response.data.user.profilePicture);
+
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       setProfilePicture(null);
     } catch (error) {
-      setError(error);
+      setError(
+        error.response?.data?.message || "Failed to update profile picture"
+      );
     }
   };
+
   const cancelImageUpdate = () => {
     setProfilePicture(null);
-    setPreview(user.profilePicture);
+    setPreview(currentUser.profilePicture || user.profilePicture);
   };
+
   const updateProfile = async () => {
     try {
       const response = await api.patch("/user/updateProfile", data, {
@@ -69,6 +95,10 @@ const EditProfile = ({ user }) => {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
+
+      // Update Redux store with new user data
+      dispatch(addUser(response.data.user));
+
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (error) {
@@ -83,9 +113,17 @@ const EditProfile = ({ user }) => {
           {/* Profile Picture */}
           <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-500">
             <img
-              src={preview}
+              src={
+                preview ||
+                "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
+              }
               alt="Profile"
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src =
+                  "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+              }}
             />
           </div>
           <div className="flex justify-center items-center m-2">

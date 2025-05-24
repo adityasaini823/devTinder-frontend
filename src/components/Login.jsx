@@ -12,29 +12,35 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
+
   useEffect(() => {
     if (user) {
       navigate("/");
     }
-  }, []);
+  }, [user, navigate]);
 
   const handleLogin = async () => {
     try {
       const response = await api.post(
         "/login",
         { username, password },
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
       const data = response.data;
-      console.log(data.data.user);
       dispatch(addUser(data.data.user));
-      localStorage.setItem("accessToken", data.data.accessToken); // Fixed typo in accessToken
+      localStorage.setItem("accessToken", data.data.accessToken);
       navigate("/");
     } catch (error) {
+      console.error("Login error:", error);
       setError(error.response?.data?.message || "Something went wrong!");
-      console.log(error);
     }
   };
+
   return (
     <div className="flex justify-center my-6">
       <div className="card card-side bg-base-300 shadow-sm justify-center">

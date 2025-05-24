@@ -4,7 +4,10 @@ import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
 import api from "../axios/api";
 
-const socket = io("http://16.171.249.248:3000", { withCredentials: true });
+const socket = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+  withCredentials: true,
+  transports: ["websocket", "polling"],
+});
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -68,6 +71,13 @@ const Chat = () => {
     setMessages((prev) => [...prev, optimisticMessage]);
 
     setMessage("");
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent default to avoid new line
+      handleSendMessage();
+    }
   };
 
   return (
@@ -134,7 +144,8 @@ const Chat = () => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Message..."
+            onKeyPress={handleKeyPress}
+            placeholder="Message... (Press Enter to send)"
             className="flex-1 px-4 py-2 bg-base-300 rounded-full outline-none"
           />
           <button
